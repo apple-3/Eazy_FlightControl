@@ -1,7 +1,5 @@
 #include "NRF24L01_Bridge.h"
 #include "NRF24L01.hpp"
-#include <cstdint>
-#include <stdint.h>
 static NRF24L01 nrf; // 单例模式
 extern "C" {
 

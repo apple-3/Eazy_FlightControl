@@ -5,8 +5,6 @@
 #include "task.h"
 #include "spi.h"
 #include "stm32_hal_legacy.h"
-#include <cstdint>
-#include <cstdio>
 uint8_t front_password[7] = "c8suco";
 uint8_t out_password[7]   = "c8suco";
 static uint8_t NRF24L01_Send_ADDR[5]    = {0xF0, 0xF0, 0xF0, 0xF0, 0xF0};
