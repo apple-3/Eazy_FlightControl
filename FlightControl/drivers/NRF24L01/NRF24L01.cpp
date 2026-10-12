@@ -5,8 +5,6 @@
 #include "task.h"
 #include "spi.h"
 #include "stm32_hal_legacy.h"
-#include <cstdint>
-#include <cstdio>
 uint8_t front_password[7] = "c8suco";
 uint8_t out_password[7]   = "c8suco";
 static uint8_t NRF24L01_Send_ADDR[5]    = {0xF0, 0xF0, 0xF0, 0xF0, 0xF0};
@@ -68,6 +66,9 @@ void NRF24L01::NRF24L01_Init(void) {
     NRF24L01_CE_SET;
 }
 uint8_t NRF24L01::NRF24L01_receive(uint8_t *buf) {
+    NRF24L01_CE_RESET;
+    NRF24L01::NRF24L01_write_reg(NRF24L01_W_REGISTER + NRF24L01_CONFIG, 0x0F);
+    NRF24L01_CE_SET;
     uint8_t Status = NRF24L01_read_reg(NRF24L01_STATUS);
     if (Status & NRF24L01_RX_OK) {
         NRF24L01_read_buf(NRF24L01_R_RX_PAYLOAD, buf, NRF24L01_Buf_Len);

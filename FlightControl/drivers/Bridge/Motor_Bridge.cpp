@@ -1,6 +1,5 @@
 #include "Motor_Config.hpp"
 #include "Motor_Bridge.h"
-#include <cstddef>
 #include <vector>
 #define MAX_MOTORS 8
 static std::vector<Motor *> motor;
