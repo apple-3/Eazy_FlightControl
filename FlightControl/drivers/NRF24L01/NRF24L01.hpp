@@ -47,6 +47,7 @@
 #define NRF24L01_RX_OK 0x40
 #define NRF24L01_TX_OK 0x20
 #define NRF24L01_MAX_TX 0x10
+#define NRF24L01_ERROR 0
 
 #define NRF24L01_Buf_Len 24
 

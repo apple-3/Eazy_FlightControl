@@ -1,6 +1,5 @@
 #include "NRF24L01.hpp"
 #include "FreeRTOS.h"
-#include "NRF24L01_Bridge.h"
 #include "stm32f4xx_hal.h"
 #include "task.h"
 #include "spi.h"

@@ -1,3 +1,12 @@
+#include <math.h>
+#include <stdint.h>
+#include <stdio.h>
+#include "stm32_hal_legacy.h"
+#include "stm32f4xx_hal.h"
+#include "stm32f4xx_hal_gpio.h"
+#include "stm32f4xx_hal_tim.h"
+#include "tim.h"
+#include "usart.h"
 #include "freertos_start.h"
 #include "Com_Config.h"
 #include "Filter_Bridge.h"
@@ -10,17 +19,8 @@
 #include "portmacro.h"
 #include "projdefs.h"
 #include "semphr.h"
-#include "stm32_hal_legacy.h"
-#include "stm32f4xx_hal.h"
-#include "stm32f4xx_hal_gpio.h"
-#include "stm32f4xx_hal_tim.h"
 #include "task.h"
-#include "tim.h"
 #include "ultrasonic.h"
-#include "usart.h"
-#include <math.h>
-#include <stdint.h>
-#include <stdio.h>
 // 电机任务
 #define Motor_Task_stack_size 512
 #define Motor_Task_prioritize 2
