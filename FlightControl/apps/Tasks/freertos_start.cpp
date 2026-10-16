@@ -1,65 +1,64 @@
-#include <math.h>
-#include <stdint.h>
-#include <stdio.h>
-#include "stm32_hal_legacy.h"
-#include "stm32f4xx_hal.h"
-#include "stm32f4xx_hal_gpio.h"
-#include "stm32f4xx_hal_tim.h"
-#include "tim.h"
-#include "usart.h"
 #include "freertos_start.h"
 #include "Com_Config.h"
 #include "Filter_Bridge.h"
-#include "FreeRTOS.h"
-#include "IMU_Bridge.h"
-#include "Motor_Bridge.h"
-#include "NRF24L01_Bridge.h"
-#include "PIDset_Bridge.h"
+#include "MPU6050.hpp"
+#include "Motor_Config.hpp"
+#include "NRF24L01.hpp"
+#include "PIDset.hpp"
+#include "bsp_if.h"
 #include "main.h"
+#include "stm32f4xx_hal_tim.h"
+#include "ultrasonic.h"
+#include <math.h>
+#include <stdint.h>
+#include <stdio.h>
+extern "C" {
+#include "FreeRTOS.h"
 #include "portmacro.h"
 #include "projdefs.h"
 #include "semphr.h"
 #include "task.h"
-#include "ultrasonic.h"
+}
 // 电机任务
 #define Motor_Task_stack_size 512
 #define Motor_Task_prioritize 2
 TaskHandle_t Motor_Task_handle;
-void Motor_Task(void *any);
 // 配置任务
 #define Status_Task_stack_size 256
 #define Status_Task_prioritize 3
 TaskHandle_t Status_Task_handle;
-void Status_Task(void *any);
 // 陀螺仪任务
 #define MPU_Task_stack_size 512
 #define MPU_Task_prioritize 2
 TaskHandle_t MPU_Task_handle;
-void MPU_Task(void *any);
 #define NRF_Send_stack_size 128
 #define NRF_Send_Task_prioritize 1
 TaskHandle_t NRF_Send_handle;
-void NRF_Send_Task(void *any);
 QueueHandle_t sem_handle;
 
+extern "C" void Motor_Task(void *any);
+extern "C" void MPU_Task(void *any);
+extern "C" void Status_Task(void *any);
+extern "C" void NRF_Send_Task(void *any);
+static NRF24L01 nrf;
+Motor Left_Front(&htim3, TIM_CHANNEL_2);
+Motor Right_Behind(&htim3, TIM_CHANNEL_3);
+Motor Left_Behind(&htim2, TIM_CHANNEL_1);
+Motor Right_Front(&htim2, TIM_CHANNEL_2);
+// PID还没调
+PID<float> Pitch_Angle(1.0f, 0.05f, 0.05f);
+PID<float> Roll_Angle(1.0f, 0.05f, 0.05f);
+PID<float> Yaw_Angle(1.0f, 0, 0.05f);
+PID<float> Pitch_Gyro(1.0f, 0.05f, 0.01f);
+PID<float> Roll_Gyro(1.0f, 0.05f, 0.01f);
+PID<float> Yaw_Gyro(1.0f, 0.05f, 0.01f);
 uint8_t Buf[NRF24L01_Buf_Len] = {0};
 uint8_t Send_Buf[NRF24L01_Buf_Len] = {'c', '8', 's', 'u', 'c', 'o'};
 uint8_t Telecontrol = 0;                                       // 遥控器接收状态
 Remote_data Remote_Control_Data = {500, 500, 500, 0, 0, 0, 0}; // 遥控器接收数据
-
-// 电机控制器句柄
-Motor_Handle Left_Front;
-Motor_Handle Right_Behind;
-Motor_Handle Left_Behind;
-Motor_Handle Right_Front;
-
-// PID控制器句柄
-PID_Handle Pitch_Angle_PID;
-PID_Handle Roll_Angle_PID;
-PID_Handle Yaw_Rate_PID;
-PID_Handle Pitch_Gyro_PID;
-PID_Handle Roll_Gyro_PID;
-PID_Handle Yaw_Gyro_PID;
+mpu6050_write_reg_t MPU6050_Write_Reg = BSP_I2C_Write;
+mpu6050_read_reg_t MPU6050_Read_Reg = BSP_I2C_Read;
+MPU6050 mpu(MPU6050_Write_Reg, MPU6050_Read_Reg);
 
 MPU_Data MPU_Data_Real = {0, 0, 0};
 MPU_Data MPU_Data_Last = {0, 0, 0};
@@ -119,24 +118,14 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName) {
 }
 
 void Start_Rtos(void) {
-  NRF_Init();
-  MPU_Init();
-  MPU_Zero_Offset();
+  nrf.NRF24L01_Init();
+  mpu.init();
+  mpu.Zero_Offset();
 
-  Left_Front = Motor_Create(&htim3, TIM_CHANNEL_2);
-  Right_Behind = Motor_Create(&htim3, TIM_CHANNEL_3);
-  Left_Behind = Motor_Create(&htim2, TIM_CHANNEL_1);
-  Right_Front = Motor_Create(&htim2, TIM_CHANNEL_2);
-  Motor_Start(Left_Front);
-  Motor_Start(Right_Behind);
-  Motor_Start(Left_Behind);
-  Motor_Start(Right_Front);
-  // PID还没调
-  Pitch_Angle_PID = PID_Creat(1.0f, 0.05f, 0.05f);
-  Roll_Angle_PID = PID_Creat(1.0f, 0.05f, 0.05f);
-  Yaw_Rate_PID = PID_Creat(1.0f, 0, 0.05f);
-  Pitch_Gyro_PID = PID_Creat(1.0f, 0.05f, 0.01f);
-  Roll_Gyro_PID = PID_Creat(1.0f, 0.05f, 0.01f);
+  Left_Front.init();
+  Right_Front.init();
+  Left_Behind.init();
+  Right_Front.init();
 
   vSemaphoreCreateBinary(sem_handle);
 
@@ -205,28 +194,33 @@ void Motor_Task(void *any) {
       控制器失联：通过内部的姿态计算选择对应的电机控制，比如：降落、大幅度矫正、或者如果有视觉就选没人的地方迫降吧（，当然还有可能还没飞就失联了
     */
     switch (state) {
-    case MOTOR_STATE_IDLE:
-      Motor_Set_Speed(Left_Front, 1000);
-      Motor_Set_Speed(Right_Front, 1000);
-      Motor_Set_Speed(Left_Behind, 1000);
-      Motor_Set_Speed(Right_Behind, 1000);
+    case MOTOR_STATE_IDLE: {
+      Left_Front.setSpeed(1000);
+      Left_Behind.setSpeed(1000);
+      Right_Behind.setSpeed(1000);
+      Right_Front.setSpeed(1000);
       // 每个状态都上报，避免状态切换时串口流出现空档
       Uart_Send_Motors(1000, 1000, 1000, 1000);
       Send_Buf[20] = MOTOR_STATE_IDLE;
       break;
-    case MOTOR_STATE_CALI:
-      Motor_Set_Speed(Left_Front, 2000);
-      Motor_Set_Speed(Right_Front, 2000);
-      Motor_Set_Speed(Left_Behind, 2000);
-      Motor_Set_Speed(Right_Behind, 2000);
+    }
+    case MOTOR_STATE_CALI: {
+      Left_Front.setSpeed(2000);
+      Right_Front.setSpeed(2000);
+      Left_Behind.setSpeed(2000);
+      Right_Behind.setSpeed(2000);
       Uart_Send_Motors(2000, 2000, 2000, 2000);
       break;
-    case MOTOR_STATE_ACTIVE:
-      float pitch_output = F_PID_Up(Pitch_Angle_PID, Pitch_Gyro_PID,
-                                    pitch_target, att.pitch, att.gy, dt);
-      float roll_output = F_PID_Up(Roll_Angle_PID, Roll_Gyro_PID, roll_target,
-                                   att.roll, att.gx, dt);
-      float yaw_output = PID_Yaw_Update_Float(yaw_target, att.gz, dt);
+    }
+    case MOTOR_STATE_ACTIVE: {
+      Pitch_Angle.Set_Setpoint(pitch_target);
+      Roll_Angle.Set_Setpoint(roll_target);
+      Yaw_Angle.Set_Setpoint(yaw_target);
+      float pitch_output =
+          Pitch_Angle.Update_Chain(Pitch_Gyro, att.pitch, att.gy, dt);
+      float roll_output =
+          Roll_Angle.Update_Chain(Roll_Gyro, att.roll, att.gx, dt);
+      float yaw_output = Yaw_Angle.Update_Chain(Yaw_Gyro, att.yaw, att.gz, dt);
 
       int16_t speed_LB = clamp_speed(
           (int16_t)(base_speed - pitch_output + roll_output - yaw_output));
@@ -237,10 +231,10 @@ void Motor_Task(void *any) {
       int16_t speed_RF = clamp_speed(
           (int16_t)(base_speed + pitch_output - roll_output - yaw_output));
 
-      Motor_Set_Speed(Left_Front, speed_LF);
-      Motor_Set_Speed(Right_Front, speed_RF);
-      Motor_Set_Speed(Left_Behind, speed_LB);
-      Motor_Set_Speed(Right_Behind, speed_RB);
+      Left_Front.setSpeed(speed_LF);
+      Right_Front.setSpeed(speed_RF);
+      Left_Behind.setSpeed(speed_LB);
+      Right_Behind.setSpeed(speed_RB);
       Send_Buf[6] = (uint8_t)(speed_LF & 0xFF);
       Send_Buf[7] = (uint8_t)((speed_LF >> 8) & 0xFF);
       Send_Buf[8] = (uint8_t)(speed_RF & 0xFF);
@@ -252,15 +246,16 @@ void Motor_Task(void *any) {
       Send_Buf[20] = MOTOR_STATE_ACTIVE; // 通信正常且电机接收信号正常
       Uart_Send_Motors(speed_LF, speed_RF, speed_LB, speed_RB);
       break;
-    case MOTOR_STATE_UNREMOTE:
+    }
+    case MOTOR_STATE_UNREMOTE: {
       // 这里是蜂鸣器的逻辑，并且最好能计算当前姿态然后选择模式，大概（
       // 比如说单纯平飞失联，慢慢降落或者返程（通过GPS）
       // 再者就是大角度坠机 =。=那就要看看怎么让电机骚操作救回来了
       // 这里先默认暂停电机
-      Motor_Set_Speed(Left_Front, 1000);
-      Motor_Set_Speed(Right_Front, 1000);
-      Motor_Set_Speed(Left_Behind, 1000);
-      Motor_Set_Speed(Right_Behind, 1000);
+      Left_Front.setSpeed(1000);
+      Left_Behind.setSpeed(1000);
+      Right_Behind.setSpeed(1000);
+      Right_Front.setSpeed(1000);
       Uart_Send_Motors(1000, 1000, 1000, 1000);
       Send_Buf[20] = MOTOR_STATE_UNREMOTE;
       break;
@@ -269,15 +264,15 @@ void Motor_Task(void *any) {
     case MOTOR_STATE_ARMED: // 忠诚！！！
       break;
     }
-    // uint8_t a = NRF_Send(Send_Buf);
+    }
     vTaskDelayUntil(&last_wake, pdMS_TO_TICKS(50));
   }
 }
 void MPU_Task(void *any) {
   TickType_t last_wake = xTaskGetTickCount();
   while (1) {
-    MPU_Zero_Offset_Accel(&ax, &ay, &az);
-    MPU_Zero_Offset_Gyro(&gx, &gy, &gz);
+    mpu.Read_Accel_Calibrated(ax, ay, az);
+    mpu.Read_Gyro_Calibrated(gx, gy, gz);
     MPU_Data_Real.roll = atan2f(ay, az) * 180.0f / 3.141592f;
     MPU_Data_Real.pitch =
         atan2f(-ax, sqrtf(ay * ay + az * az)) * 180.0f / 3.141592f;
@@ -333,11 +328,7 @@ void Status_Task(void *any) {
       xTaskGetTickCount() - pdMS_TO_TICKS(REMOTE_LINK_TIMEOUT_MS);
   while (1) {
     TickType_t now = xTaskGetTickCount();
-    Telecontrol = NRF_Receive(Buf); // 获取遥控器数据
-    /*
-    NRF_Send有问题会导致接收状态不正常
-    */
-    // NRF_Send(Send_Buf);
+    Telecontrol = nrf.NRF24L01_receive(Buf); // 获取遥控器数据
     if (Telecontrol == NRF24L01_RX_OK) {
       last_remote_rx_tick = now;
       Com_NRF_Access(&Remote_Control_Data, Buf);
@@ -351,7 +342,7 @@ void Status_Task(void *any) {
 
     // 状态机逻辑
     switch (motor_state) {
-    case MOTOR_STATE_IDLE:
+    case MOTOR_STATE_IDLE: {
       if (link_ok == 0) {
         motor_state = MOTOR_STATE_UNREMOTE; // 真失联
       } else if (Remote_Control_Data.shortdown != 0) {
@@ -360,36 +351,42 @@ void Status_Task(void *any) {
         motor_state = MOTOR_STATE_CALI;
       }
       break;
-    case MOTOR_STATE_ACTIVE:
+    }
+    case MOTOR_STATE_ACTIVE: {
       if (link_ok == 0 || Remote_Control_Data.shortdown == 0) {
         motor_state = MOTOR_STATE_UNREMOTE;
       }
       break;
-    case MOTOR_STATE_CALI:
+    }
+    case MOTOR_STATE_CALI: {
       if (link_ok == 0) {
         motor_state = MOTOR_STATE_UNREMOTE;
       }
       break;
-    case MOTOR_STATE_UNREMOTE:
+    }
+    case MOTOR_STATE_UNREMOTE: {
       if (link_ok != 0 && Remote_Control_Data.shortdown != 0) {
         motor_state = MOTOR_STATE_IDLE;
       }
       break;
-    case MOTOR_STATE_SLOW:
+    }
+    case MOTOR_STATE_SLOW: {
       break;
-    case MOTOR_STATE_ARMED:
+    }
+    case MOTOR_STATE_ARMED: {
       break;
+    }
     }
     vTaskDelay(pdMS_TO_TICKS(10));
   }
 }
 void NRF_Send_Task(void *any) {
-  BaseType_t res=0;
+  BaseType_t res = 0;
   while (1) {
     res = xSemaphoreTake(sem_handle, portMAX_DELAY);
-    if (res==pdPASS) {
-      NRF_Send(Send_Buf);
+    if (res == pdPASS) {
+      nrf.NRF24L01_send(Send_Buf);
     }
-    vTaskDelay(1000);
+    vTaskDelay(pdMS_TO_TICKS(10));
   }
 }

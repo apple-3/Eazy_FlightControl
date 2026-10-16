@@ -14,7 +14,6 @@ target_include_directories(drivers_lib PUBLIC
     ${CMAKE_SOURCE_DIR}/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy
     ${CMAKE_SOURCE_DIR}/Drivers/CMSIS/Device/ST/STM32F4xx/Include
     ${CMAKE_SOURCE_DIR}/Drivers/CMSIS/Include
-    ${CMAKE_SOURCE_DIR}/FilightControl/interface
     ${CMAKE_SOURCE_DIR}/Middlewares/Third_Party/FreeRTOS/Source/include
     ${CMAKE_SOURCE_DIR}/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F
 )
@@ -24,4 +23,7 @@ target_compile_definitions(drivers_lib PUBLIC
     STM32F407xx
 )
 
-target_link_libraries(drivers_lib PUBLIC interfaces_lib)
+target_link_libraries(drivers_lib PUBLIC
+    interfaces_lib
+    bsp_lib
+)

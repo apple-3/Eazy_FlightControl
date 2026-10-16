@@ -1,12 +1,8 @@
 #include "ultrasonic.h"
-#include "FreeRTOS.h"
-#include "main.h"
-#include "stm32f4xx_hal.h"
-#include "stm32f4xx_hal_gpio.h"
-#include "stm32f4xx_hal_tim.h"
-#include "task.h"
-#include "tim.h"
 #include <stdint.h>
+#include "FreeRTOS.h"
+#include "task.h"
+#include "bsp_if.h"
 
 static void Ultrasonic_DelayUs(uint32_t us)
 {
