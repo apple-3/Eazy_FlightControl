@@ -2,7 +2,7 @@
 #define COM_CONFIG_H
 
 #include <stdint.h>
-
+#include "bsp_board_config.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -21,6 +21,7 @@ typedef struct Measure_Data {
 } MPU_Data;
 void Com_Limit(float *inner, float Max, float Min);
 void Com_NRF_Access(Remote_data *data, uint8_t *Buf);
+int16_t clamp_speed(int16_t v);
 
 #ifdef __cplusplus
 }
