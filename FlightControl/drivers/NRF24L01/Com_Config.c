@@ -1,6 +1,5 @@
 #include "Com_Config.h"
-#include "NRF24L01_Bridge.h"
-extern uint8_t Buf[NRF24L01_Buf_Len];
+
 void Com_Limit(float *inner, float Max, float Min) {
   if (*inner > Max) {
     *inner = Max;
@@ -17,4 +16,12 @@ void Com_NRF_Access(Remote_data *data,uint8_t *Buf) {
   data->shortdown = Buf[14];
   data->fix_high = Buf[15];
   data->calibrate = Buf[16];
+}
+// PWM限幅
+int16_t clamp_speed(int16_t v) {
+  if (v <= MIN_SPEED)
+    return MIN_SPEED;
+  if (v >= MAX_SPEED)
+    return MAX_SPEED;
+  return v;
 }
