@@ -1,7 +1,5 @@
-#ifndef FREERTOS_START_H
-#define FREERTOS_START_H
-
-
+#ifndef APP_MAIN_H
+#define APP_MAIN_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -12,5 +10,4 @@ void App_Rtos_Creat(void);
 }
 #endif
 
-
-#endif // FREERTOS_START_H
+#endif // APP_MAIN_H
