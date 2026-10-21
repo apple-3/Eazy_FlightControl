@@ -1,5 +1,4 @@
 #include "Motor_Config.hpp"
-#include "stm32f4xx_hal_tim.h"
 Motor::Motor(TIM_HandleTypeDef *_pwm_tim, uint32_t _pwm_channel)
     : _pwm_tim(_pwm_tim), _pwm_channel(_pwm_channel), _current_speed(0) {}
 bool Motor::init() {

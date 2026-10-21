@@ -1,11 +1,11 @@
 #ifndef COM_CONFIG_H
 #define COM_CONFIG_H
-#include "stm32_hal_legacy.h"
-#include "stm32f4xx_hal.h"
-#include "stm32f4xx_hal_gpio.h"
-#include "stm32f4xx_hal_tim.h"
-#include "tim.h"
+
 #include <stdint.h>
+#include "bsp_board_config.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct Joy_data {
   uint16_t pit;
@@ -21,5 +21,10 @@ typedef struct Measure_Data {
 } MPU_Data;
 void Com_Limit(float *inner, float Max, float Min);
 void Com_NRF_Access(Remote_data *data, uint8_t *Buf);
+int16_t clamp_speed(int16_t v);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // COM_CONFIG_H

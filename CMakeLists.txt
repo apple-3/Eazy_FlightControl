@@ -30,10 +30,24 @@ message("Build type: " ${CMAKE_BUILD_TYPE})
 
 # Enable CMake support for ASM, C and C++ languages
 enable_language(C CXX ASM)
+# 禁用异常和 RTTI
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
+add_library(platform INTERFACE)
+target_include_directories(platform INTERFACE
+    ${CMAKE_SOURCE_DIR}/Core/Inc
+    ${CMAKE_SOURCE_DIR}/Drivers/STM32F4xx_HAL_Driver/Inc
+    ${CMAKE_SOURCE_DIR}/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy
+    ${CMAKE_SOURCE_DIR}/Drivers/CMSIS/Device/ST/STM32F4xx/Include
+    ${CMAKE_SOURCE_DIR}/Drivers/CMSIS/Include
+    ${CMAKE_SOURCE_DIR}/Middlewares/Third_Party/FreeRTOS/Source/include
+    ${CMAKE_SOURCE_DIR}/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F
+    ${CMAKE_SOURCE_DIR}/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2
+)
 add_subdirectory(FlightControl/middleware)
 add_subdirectory(FlightControl/interface)
 add_subdirectory(FlightControl/drivers)
 add_subdirectory(FlightControl/apps)
+add_subdirectory(FlightControl/bsp)
 # Create an executable object type
 add_executable(${CMAKE_PROJECT_NAME}
 
@@ -69,5 +83,6 @@ list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
     app_lib
+    bsp_lib
     # Add user defined libraries
 )

@@ -2,7 +2,7 @@
 #define MOTOR_CONFIG_H
 
 #include "imotor.hpp"
-#include "stm32f4xx_hal.h"
+#include "bsp_tim.hpp"
 
 class Motor : public imotor {
 public:

@@ -1,7 +1,6 @@
 #include "MPU6050.hpp"
 #include "MPU6050_Reg.h"
 #include "iimu.hpp"
-
 #include <cstdint>
 
 static uint8_t _ADDR = 0x68 << 1;
