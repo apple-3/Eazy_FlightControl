@@ -1,4 +1,4 @@
-#include "freertos_start.h"
+#include "app_main.h"
 #include "Com_Filter.hpp"
 #include "MPU6050.hpp"
 #include "Motor_Config.hpp"
@@ -40,7 +40,6 @@ TaskHandle_t MPU_Task_handle;
 #define NRF_Send_stack_size 128
 #define NRF_Send_Task_prioritize 1
 TaskHandle_t NRF_Send_handle;
-QueueHandle_t sem_handle;
 
 // 遥控链路超时(ms)：NRF_Receive 只是轮询NRF的 STATUS 寄存器，
 // 取不到数据只说明"这一轮刚好没收到"，不代表失联。
@@ -75,7 +74,8 @@ void Start_Rtos(void) {
   SystemContext::nrf.NRF24L01_Init();
   SystemContext::mpu.Zero_Offset();
   // 初始化01值信号量
-  vSemaphoreCreateBinary(sem_handle);
+  vSemaphoreCreateBinary(SharedData::sem_handle);
+  SharedData::mutex_init();
   // 创建任务
   App_Rtos_Creat();
   // 启动任务调度进入循环
@@ -95,5 +95,4 @@ void App_Rtos_Creat(void) {
   xTaskCreate(NRF_Send_Task, "NRF_Send_Task", NRF_Send_stack_size, NULL,
               NRF_Send_Task_prioritize, &NRF_Send_handle);
 }
-
 

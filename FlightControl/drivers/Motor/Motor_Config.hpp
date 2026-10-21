@@ -2,7 +2,7 @@
 #define MOTOR_CONFIG_H
 
 #include "imotor.hpp"
-#include "bsp_if.h"
+#include "bsp_tim.hpp"
 
 class Motor : public imotor {
 public:

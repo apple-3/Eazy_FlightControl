@@ -1,8 +1,6 @@
 #ifndef NRF24L01_H
 #define NRF24L01_H
 #include <cstdint>
-#include "bsp_if.h"
-
 #define NRF24L01_CONFIG 0x00
 #define NRF24L01_EN_AA 0x01
 #define NRF24L01_EN_RXADDR 0x02

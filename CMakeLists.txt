@@ -30,6 +30,8 @@ message("Build type: " ${CMAKE_BUILD_TYPE})
 
 # Enable CMake support for ASM, C and C++ languages
 enable_language(C CXX ASM)
+# 禁用异常和 RTTI
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
 add_library(platform INTERFACE)
 target_include_directories(platform INTERFACE
     ${CMAKE_SOURCE_DIR}/Core/Inc

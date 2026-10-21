@@ -15,3 +15,4 @@ target_compile_definitions(bsp_lib PUBLIC
     STM32F407xx
 )
 target_link_libraries(bsp_lib PUBLIC platform)
+target_link_libraries(bsp_lib PUBLIC interfaces_lib)
