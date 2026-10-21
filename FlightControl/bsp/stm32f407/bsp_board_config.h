@@ -1,7 +1,9 @@
 #ifndef BSP_BOARD_IF_H
 #define BSP_BOARD_IF_H
+#include "spi.h"
 #include "tim.h"
 #include "usart.h"
+#include "i2c.h"
 // 电机定时器
 #define Left_Front_TIM (&htim3)
 #define Right_Behind_TIM (&htim3)
@@ -17,7 +19,7 @@
 #define UART_TX_TIMEOUT_MS 20U
 #define MSG_SIZE 128
 #define UART_SEND_OK 1
-//SPI
+// SPI
 #define BSP_SPI (&hspi1)
 #define BSP_SPI_TIMEOUT_MS 10U
 

@@ -1,9 +1,10 @@
-#include "bsp_if.h"
-
-// I2C1 引脚：PB6 = SCL, PB7 = SDA（见 Core/Src/i2c.c）
-#define IMU_I2C_PORT GPIOB
-#define IMU_I2C_SCL_PIN GPIO_PIN_6
-#define IMU_I2C_SDA_PIN GPIO_PIN_7
+#include "bsp_i2c.hpp"
+#include "bsp_board_config.h"
+#include "bsp_gpio.hpp"
+#include "stm32_hal_legacy.h"
+#include "stm32f407xx.h"
+#include "stm32f4xx_hal.h"
+#include "stm32f4xx_hal_def.h"
 
 // 恢复限流：设备本来就不在线时，不要每次读写失败都去复位总线
 #define IMU_I2C_RECOVER_MIN_INTERVAL_MS 100U
@@ -31,35 +32,35 @@ void BSP_I2C_Bus_Recover(void) {
   HAL_I2C_DeInit(&hi2c1);
 
   // 2) 在 SCL 上打 9 个时钟，把卡在字节中间的从机顶出去
-  gpio.Pin = IMU_I2C_SCL_PIN | IMU_I2C_SDA_PIN;
+  gpio.Pin = GPIO_PIN_6 | GPIO_PIN_7;
   gpio.Mode = GPIO_MODE_OUTPUT_OD;
   gpio.Pull = GPIO_NOPULL;
   gpio.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  HAL_GPIO_Init(IMU_I2C_PORT, &gpio);
-  HAL_GPIO_WritePin(IMU_I2C_PORT, IMU_I2C_SCL_PIN | IMU_I2C_SDA_PIN,
-                    GPIO_PIN_SET);
+  HAL_GPIO_Init(GPIOB, &gpio);
+  BSP::PINs::I2C1Scl.high();
+  BSP::PINs::I2C1Sda.high();
 
   for (int i = 0; i < 9; i++) {
-    HAL_GPIO_WritePin(IMU_I2C_PORT, IMU_I2C_SCL_PIN, GPIO_PIN_RESET);
+    BSP::PINs::I2C1Scl.low();
     for (volatile int d = 0; d < 200; d++) {
       __NOP();
     }
-    HAL_GPIO_WritePin(IMU_I2C_PORT, IMU_I2C_SCL_PIN, GPIO_PIN_SET);
+    BSP::PINs::I2C1Scl.high();
     for (volatile int d = 0; d < 200; d++) {
       __NOP();
     }
   }
 
   // 3) 补一个 STOP 条件：SCL 为高时 SDA 由低跳高
-  HAL_GPIO_WritePin(IMU_I2C_PORT, IMU_I2C_SDA_PIN, GPIO_PIN_RESET);
+  BSP::PINs::I2C1Sda.low();
   for (volatile int d = 0; d < 200; d++) {
     __NOP();
   }
-  HAL_GPIO_WritePin(IMU_I2C_PORT, IMU_I2C_SCL_PIN, GPIO_PIN_SET);
+  BSP::PINs::I2C1Scl.high();
   for (volatile int d = 0; d < 200; d++) {
     __NOP();
   }
-  HAL_GPIO_WritePin(IMU_I2C_PORT, IMU_I2C_SDA_PIN, GPIO_PIN_SET);
+  BSP::PINs::I2C1Sda.high();
 
   // 4) 重新初始化外设，并把 PB6/PB7 配回复用功能
   MX_I2C1_Init();

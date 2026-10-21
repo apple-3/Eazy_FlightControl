@@ -1,5 +1,9 @@
+#include "bsp_spi.hpp"
 #include "bsp_board_config.h"
-#include "bsp_if.h"
+#include "stm32_hal_legacy.h"
+#include "stm32f407xx.h"
+#include "stm32f4xx_hal.h"
+#include "stm32f4xx_hal_def.h"
 
 uint8_t BSP_SPI_SwapByte(uint8_t Byte) {
   uint8_t receive = 0;
