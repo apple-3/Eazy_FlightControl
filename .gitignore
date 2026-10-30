@@ -6,7 +6,9 @@ build-*/
 *.hex
 *.map
 *.a
-
+asm.txt
+asm_released.txt
+ARCHITECTURE_REVIEW.md
 .vscode/
 .setting/
 .clangd/

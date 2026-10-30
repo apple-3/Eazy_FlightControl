@@ -70,7 +70,7 @@ void Start_Rtos(void) {
   SystemContext::Left_Front.init();
   SystemContext::Right_Front.init();
   SystemContext::Left_Behind.init();
-  SystemContext::Right_Front.init();
+  SystemContext::Right_Behind.init();
   SystemContext::nrf.NRF24L01_Init();
   SystemContext::mpu.Zero_Offset();
   // 初始化01值信号量
